@@ -8,7 +8,7 @@ const globalForPrisma = globalThis
 
 // Extend the NodeJS global type so TS knows about `prisma`
 declare global {
-    // eslint-disable-next-line no-var
+     
     var prisma: PrismaClient | undefined
   }
 

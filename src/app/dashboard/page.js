@@ -2,6 +2,7 @@
 
 import { useSession, signOut } from "next-auth/react"
 import ProtectedRoute from "../api/auth/protectedRoute"
+import Image from "next/image"
 
 export default function DashboardPage() {
   const { data: session } = useSession()
@@ -49,7 +50,7 @@ export default function DashboardPage() {
                   {session?.user?.image && (
                     <div>
                       <span className="text-gray-600">Profile Picture:</span>
-                      <img
+                      <Image
                         src={session.user.image}
                         alt="Profile"
                         className="ml-2 w-12 h-12 rounded-full inline-block"
