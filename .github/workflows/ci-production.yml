@@ -28,6 +28,10 @@ jobs:
   validate:
     runs-on: ubuntu-latest
 
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -115,6 +119,10 @@ jobs:
     # Wait for validation to pass before running E2E tests
     # Why? E2E tests are slow/expensive - no point if build is broken
 
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -164,6 +172,10 @@ jobs:
     permissions:
       contents: read
       # Can read repository contents (for deployment)
+
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
 
     steps:
       - name: Checkout code

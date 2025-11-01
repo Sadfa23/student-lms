@@ -24,6 +24,10 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -107,6 +111,10 @@ jobs:
     needs: build-and-test
     # 'needs' means: wait for build-and-test to succeed first
     # If build-and-test fails, this job never runs
+
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
 
     steps:
       - name: Checkout code
