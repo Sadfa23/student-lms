@@ -35,7 +35,7 @@ jobs:
     # ENVIRONMENT VARIABLES: Available to all steps in this job
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+      NEXTAUTH_SECRET: ${{ secrets.NEXT_AUTH_SECRET }}
       # Why these are needed:
       # - Prisma needs DATABASE_URL to generate the client
       # - NextAuth needs NEXTAUTH_SECRET for builds
