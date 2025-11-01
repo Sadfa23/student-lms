@@ -1,0 +1,366 @@
+// This is your Prisma schema file
+// Learn more: https://pris.ly/d/prisma-schema
+// This is your Prisma schema file
+// Learn more: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email         String   @unique @db.VarChar(255)
+  emailVerified DateTime? @map("email_verified")
+  passwordHash  String?  @map("password_hash") @db.VarChar(255)
+  googleId      String?  @unique @map("google_id") @db.VarChar(255)
+  name          String   @db.VarChar(255)
+  image         String?  @db.Text
+  role          String   @default("student") @db.VarChar(50) // student, lead, co-lead, admin
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  studentTracks      StudentTrack[]
+  leadershipAsLead   TrackLeadership[] @relation("LeadUser")
+  leadershipAsCoLead TrackLeadership[] @relation("CoLeadUser")
+  eventsPosted       Event[]
+  announcementsPosted Announcement[]
+  materialsUploaded  CourseMaterial[]
+  accounts           Account[]
+  sessions           Session[]
+
+  @@index([email])
+  @@index([googleId])
+  @@map("users")
+}
+
+// NextAuth.js Models
+model Account {
+  id                String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId            String  @map("user_id") @db.Uuid
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id") @db.Uuid
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model Track {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String   @unique @db.VarChar(255)
+  description String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  leadership      TrackLeadership[]
+  students        StudentTrack[]
+  events          Event[]
+  announcements   Announcement[]
+  courseMaterials CourseMaterial[]
+
+  @@map("tracks")
+}
+
+model TrackLeadership {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  trackId    String   @map("track_id") @db.Uuid
+  leadId     String   @map("lead_id") @db.Uuid
+  coLeadId   String?  @map("co_lead_id") @db.Uuid
+  assignedAt DateTime @default(now()) @map("assigned_at")
+
+  // Relations
+  track   Track @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  lead    User  @relation("LeadUser", fields: [leadId], references: [id], onDelete: Cascade)
+  coLead  User? @relation("CoLeadUser", fields: [coLeadId], references: [id], onDelete: SetNull)
+
+  @@unique([trackId, leadId])
+  @@index([trackId])
+  @@map("tracks_leadership")
+}
+
+model StudentTrack {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId String   @map("student_id") @db.Uuid
+  trackId   String   @map("track_id") @db.Uuid
+  joinedAt  DateTime @default(now()) @map("joined_at")
+
+  // Relations
+  student User  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  track   Track @relation(fields: [trackId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, trackId])
+  @@index([studentId])
+  @@index([trackId])
+  @@map("student_tracks")
+}
+
+model Event {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  trackId     String   @map("track_id") @db.Uuid
+  title       String   @db.VarChar(255)
+  description String?  @db.Text
+  eventDate   DateTime @map("event_date")
+  location    String?  @db.VarChar(255)
+  postedBy    String   @map("posted_by") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  track Track @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  poster User @relation(fields: [postedBy], references: [id], onDelete: Cascade)
+  media EventMedia[]
+
+  @@index([trackId])
+  @@index([eventDate])
+  @@map("events")
+}
+
+model EventMedia {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventId      String   @map("event_id") @db.Uuid
+  mediaType    String   @map("media_type") @db.VarChar(50) // image, video, poster
+  cloudinaryId String   @map("cloudinary_id") @db.VarChar(255)
+  cloudinaryUrl String  @map("cloudinary_url") @db.Text
+  name         String?  @db.VarChar(255)
+  uploadedAt   DateTime @default(now()) @map("uploaded_at")
+
+  // Relations
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
+  @@map("event_media")
+}
+
+model Announcement {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  trackId   String   @map("track_id") @db.Uuid
+  title     String   @db.VarChar(255)
+  content   String   @db.Text
+  postedBy  String   @map("posted_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  track  Track @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  poster User  @relation(fields: [postedBy], references: [id], onDelete: Cascade)
+
+  @@index([trackId])
+  @@index([createdAt])
+  @@map("announcements")
+}
+
+model CourseMaterial {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  trackId       String   @map("track_id") @db.Uuid
+  title         String   @db.VarChar(255)
+  description   String?  @db.Text
+  materialType  String   @map("material_type") @db.VarChar(50) // pdf, slides, video, document
+  cloudinaryId  String   @map("cloudinary_id") @db.VarChar(255)
+  cloudinaryUrl String   @map("cloudinary_url") @db.Text
+  uploadedBy    String   @map("uploaded_by") @db.Uuid
+  uploadedAt    DateTime @default(now()) @map("uploaded_at")
+
+  // Relations
+  track    Track @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  uploader User  @relation(fields: [uploadedBy], references: [id], onDelete: Cascade)
+
+  @@index([trackId])
+  @@index([uploadedAt])
+  @@map("course_materials")
+}
+/*
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email         String   @unique @db.VarChar(255)
+  passwordHash  String?  @map("password_hash") @db.VarChar(255)
+  googleId      String?  @unique @map("google_id") @db.VarChar(255)
+  name          String   @db.VarChar(255)
+  role          String   @db.VarChar(50) // student, lead, co-lead, admin
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  studentTracks      StudentTrack[]
+  leadershipAsLead   TrackLeadership[] @relation("LeadUser")
+  leadershipAsCoLead TrackLeadership[] @relation("CoLeadUser")
+  eventsPosted       Event[]
+  announcementsPosted Announcement[]
+  materialsUploaded  CourseMaterial[]
+
+  @@index([email])
+  @@index([googleId])
+  @@map("users")
+}
+
+model Track {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String   @unique @db.VarChar(255)
+  description String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  leadership      TrackLeadership[]
+  students        StudentTrack[]
+  events          Event[]
+  announcements   Announcement[]
+  courseMaterials CourseMaterial[]
+
+  @@map("tracks")
+}
+
+model TrackLeadership {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  trackId    String   @map("track_id") @db.Uuid
+  leadId     String   @map("lead_id") @db.Uuid
+  coLeadId   String?  @map("co_lead_id") @db.Uuid
+  assignedAt DateTime @default(now()) @map("assigned_at")
+
+  // Relations
+  track   Track @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  lead    User  @relation("LeadUser", fields: [leadId], references: [id], onDelete: Cascade)
+  coLead  User? @relation("CoLeadUser", fields: [coLeadId], references: [id], onDelete: SetNull)
+
+  @@unique([trackId, leadId])
+  @@index([trackId])
+  @@map("tracks_leadership")
+}
+
+model StudentTrack {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId String   @map("student_id") @db.Uuid
+  trackId   String   @map("track_id") @db.Uuid
+  joinedAt  DateTime @default(now()) @map("joined_at")
+
+  // Relations
+  student User  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  track   Track @relation(fields: [trackId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, trackId])
+  @@index([studentId])
+  @@index([trackId])
+  @@map("student_tracks")
+}
+
+model Event {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  trackId     String   @map("track_id") @db.Uuid
+  title       String   @db.VarChar(255)
+  description String?  @db.Text
+  eventDate   DateTime @map("event_date")
+  location    String?  @db.VarChar(255)
+  postedBy    String   @map("posted_by") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  track Track @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  poster User @relation(fields: [postedBy], references: [id], onDelete: Cascade)
+  media EventMedia[]
+
+  @@index([trackId])
+  @@index([eventDate])
+  @@map("events")
+}
+
+model EventMedia {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventId      String   @map("event_id") @db.Uuid
+  mediaType    String   @map("media_type") @db.VarChar(50) // image, video, poster
+  cloudinaryId String   @map("cloudinary_id") @db.VarChar(255)
+  cloudinaryUrl String  @map("cloudinary_url") @db.Text
+  name         String?  @db.VarChar(255)
+  uploadedAt   DateTime @default(now()) @map("uploaded_at")
+
+  // Relations
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
+  @@map("event_media")
+}
+
+model Announcement {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  trackId   String   @map("track_id") @db.Uuid
+  title     String   @db.VarChar(255)
+  content   String   @db.Text
+  postedBy  String   @map("posted_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  track  Track @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  poster User  @relation(fields: [postedBy], references: [id], onDelete: Cascade)
+
+  @@index([trackId])
+  @@index([createdAt])
+  @@map("announcements")
+}
+
+model CourseMaterial {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  trackId       String   @map("track_id") @db.Uuid
+  title         String   @db.VarChar(255)
+  description   String?  @db.Text
+  materialType  String   @map("material_type") @db.VarChar(50) // pdf, slides, video, document
+  cloudinaryId  String   @map("cloudinary_id") @db.VarChar(255)
+  cloudinaryUrl String   @map("cloudinary_url") @db.Text
+  uploadedBy    String   @map("uploaded_by") @db.Uuid
+  uploadedAt    DateTime @default(now()) @map("uploaded_at")
+
+  // Relations
+  track    Track @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  uploader User  @relation(fields: [uploadedBy], references: [id], onDelete: Cascade)
+
+  @@index([trackId])
+  @@index([uploadedAt])
+  @@map("course_materials")
+}
+
+*/
