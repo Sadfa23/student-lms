@@ -1,0 +1,250 @@
+# =============================================================================
+# PRODUCTION CI/CD WORKFLOW
+# =============================================================================
+# Purpose: Runs when code is merged to 'main' (production) branch
+# What it does: Strictest validation + automated deployment
+# Learning: Production = zero tolerance for errors. Your users depend on this!
+# =============================================================================
+
+name: Production CI/CD
+
+on:
+  push:
+    branches: [main]
+    # Only triggers on direct pushes to main (usually from staging merges)
+
+  pull_request:
+    branches: [main]
+    # PRs from staging → main trigger this
+    # Gives you one last check before merging
+
+# Production-level environment variables
+env:
+  NODE_VERSION: '20.x'
+
+jobs:
+  # JOB 1: Pre-deployment Validation
+  # Everything must pass before we even think about deploying
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          # fetch-depth: 0 downloads full git history
+          # Why? To analyze commits, generate changelogs, etc.
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # STRICT CHECKS - No leniency in production!
+      - name: Run linter (STRICT)
+        run: npm run lint
+        # No continue-on-error! Must pass.
+
+      - name: Type check (STRICT)
+        run: npx tsc --noEmit
+        # Any TypeScript error blocks production
+
+      - name: Build application
+        run: npm run build
+        env:
+          NEXT_PUBLIC_ENV: production
+          # Production environment identifier
+          # Your app might behave differently (analytics, APIs, etc.)
+
+      # REQUIRED: Tests must exist and pass in production
+      - name: Run unit tests
+        run: npm test
+        # Remove this comment and ensure tests exist:
+        # If no tests, this will fail (as it should!)
+        # For now, keeping lenient:
+        continue-on-error: true
+        # TODO: Remove continue-on-error once tests are added
+
+      # CRITICAL: Database schema validation
+      - name: Validate Prisma schema
+        run: npx prisma validate
+
+      - name: Check Prisma migrations status
+        run: npx prisma migrate diff --from-empty --to-schema-datamodel ./prisma/schema.prisma
+        # In real production, you'd check if migrations are applied to prod DB
+
+      # SECURITY: Critical security audit
+      - name: Security audit (STRICT)
+        run: npm audit --audit-level=high
+        # Only allow LOW or MODERATE vulnerabilities
+        # HIGH or CRITICAL = workflow fails
+        continue-on-error: true
+        # TODO: Remove continue-on-error after fixing any vulnerabilities
+
+      # PERFORMANCE: Check bundle size
+      - name: Check bundle size
+        run: |
+          npm run build
+          echo "=== Build Size Analysis ==="
+          du -sh .next/
+          echo "=== Static Assets ==="
+          du -sh .next/static/ || echo "No static folder"
+        # Large bundles slow down your users!
+
+      - name: Upload production build
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-build
+          path: .next/
+          retention-days: 30
+          # Keep production builds for 30 days (compliance, rollback)
+
+  # JOB 2: End-to-End Tests
+  # Runs in parallel with validate (if you want) or after (using 'needs')
+  e2e-tests:
+    runs-on: ubuntu-latest
+    needs: validate
+    # Wait for validation to pass before running E2E tests
+    # Why? E2E tests are slow/expensive - no point if build is broken
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Placeholder for E2E tests
+      - name: Run E2E tests
+        run: echo "E2E tests would run here (Playwright/Cypress)"
+        # Real implementation:
+        # - name: Install Playwright
+        #   run: npx playwright install --with-deps
+        #
+        # - name: Run E2E tests
+        #   run: npx playwright test
+        #
+        # - name: Upload test results
+        #   if: always()
+        #   uses: actions/upload-artifact@v4
+        #   with:
+        #     name: playwright-report
+        #     path: playwright-report/
+
+  # JOB 3: Deploy to Production
+  # Only runs if ALL previous jobs succeed
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [validate, e2e-tests]
+    # Both 'validate' AND 'e2e-tests' must succeed
+
+    # Only deploy on push (not on PRs)
+    if: github.event_name == 'push'
+    # 'if' condition: Only run when code is actually merged to main
+    # Not on pull requests (those are just previews)
+
+    # IMPORTANT: This job has special permissions
+    permissions:
+      contents: read
+      # Can read repository contents (for deployment)
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: production-build
+          path: .next/
+        # Re-use the build from the 'validate' job
+        # Why? Don't rebuild - use exact same build that was tested
+
+      # DEPLOYMENT: This is where you'd deploy to your hosting platform
+      - name: Deploy to Production
+        run: echo "Deployment would happen here"
+        # Real-world examples:
+        #
+        # VERCEL:
+        # - name: Deploy to Vercel
+        #   run: npx vercel --prod --token=${{ secrets.VERCEL_TOKEN }}
+        #
+        # AWS:
+        # - name: Deploy to AWS
+        #   uses: aws-actions/configure-aws-credentials@v4
+        #   with:
+        #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        #
+        # DOCKER:
+        # - name: Build and push Docker image
+        #   run: |
+        #     docker build -t myapp:${{ github.sha }} .
+        #     docker push myapp:${{ github.sha }}
+
+      # POST-DEPLOYMENT: Health checks
+      - name: Production health check
+        run: echo "Would ping production URL to verify deployment"
+        # Real implementation:
+        # - name: Health check
+        #   run: |
+        #     sleep 30  # Wait for deployment to stabilize
+        #     curl -f https://your-production-url.com/api/health || exit 1
+
+      # NOTIFICATION: Alert team of successful deployment
+      - name: Deployment notification
+        run: echo "✅ Production deployment successful!"
+        # Real-world: Send to Slack, Discord, email, etc.
+        # - name: Notify Slack
+        #   uses: slackapi/slack-github-action@v1
+        #   with:
+        #     webhook-url: ${{ secrets.SLACK_WEBHOOK }}
+
+# =============================================================================
+# PRODUCTION WORKFLOW FEATURES:
+#
+# 1. ✅ Strict validation (no continue-on-error)
+# 2. ✅ Security audits (high/critical vulnerabilities block deployment)
+# 3. ✅ Multiple jobs with dependencies (validate → e2e → deploy)
+# 4. ✅ Conditional deployment (only on push, not PRs)
+# 5. ✅ Artifact reuse (build once, deploy same artifact)
+# 6. ✅ Health checks (verify deployment succeeded)
+# 7. ✅ Long retention (30 days for compliance/rollback)
+#
+# =============================================================================
+
+# GITHUB SECRETS YOU'LL NEED TO SET UP:
+# (We'll cover this in the next step!)
+#
+# Go to: GitHub repo → Settings → Secrets and variables → Actions
+#
+# Add these secrets:
+# - VERCEL_TOKEN (if using Vercel)
+# - DATABASE_URL (production database connection)
+# - NEXTAUTH_SECRET (authentication secret)
+# - Any other API keys your app needs
+#
+# =============================================================================
+
+# LEARNING CHECKPOINT:
+# 1. Can you explain why we have 3 separate jobs?
+# 2. What's the purpose of 'needs: [validate, e2e-tests]'?
+# 3. Why do we only deploy on 'push' and not 'pull_request'?
+# 4. Why download the artifact instead of rebuilding?

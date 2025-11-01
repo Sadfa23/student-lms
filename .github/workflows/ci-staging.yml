@@ -1,0 +1,153 @@
+# =============================================================================
+# STAGING CI/CD WORKFLOW
+# =============================================================================
+# Purpose: Runs when code is pushed to 'staging' branch
+# What it does: More rigorous testing + preview deployment
+# Learning: Staging mimics production - catch issues before users see them!
+# =============================================================================
+
+name: Staging CI/CD
+
+on:
+  push:
+    branches: [staging]
+
+  pull_request:
+    branches: [staging]
+    # PRs from development → staging trigger this
+
+env:
+  NODE_VERSION: '20.x'
+
+jobs:
+  # JOB 1: Build and Test (same as development but stricter)
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linter
+        run: npm run lint
+        # In staging, linting must pass (no continue-on-error)
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Build application
+        run: npm run build
+        env:
+          NEXT_PUBLIC_ENV: staging
+          # Different environment identifier for staging
+
+      - name: Run tests
+        run: npm test
+        # Notice: No --if-present flag!
+        # By staging, you should have tests
+        # Uncomment when you add tests to your project
+
+        # For now, keeping it lenient:
+        continue-on-error: true
+
+      # STEP: Run Prisma checks (important for database-backed apps!)
+      - name: Validate Prisma schema
+        run: npx prisma validate
+        # Checks if your Prisma schema is valid
+        # Catches database schema errors before deployment
+
+      - name: Check for Prisma migrations
+        run: npx prisma migrate diff --from-empty --to-schema-datamodel ./prisma/schema.prisma
+        continue-on-error: true
+        # Warns if there are pending database migrations
+        # In production, you'd want this to fail if migrations aren't applied
+
+      # STEP: Security audit
+      - name: Security audit
+        run: npm audit --audit-level=moderate
+        continue-on-error: true
+        # Checks for known security vulnerabilities in dependencies
+        # --audit-level=moderate: Only fail on moderate/high/critical issues
+        # continue-on-error: Warns but doesn't block (you can remove this)
+
+      # STEP: Bundle size check (performance)
+      - name: Analyze bundle size
+        run: |
+          npm run build
+          du -sh .next/ | awk '{print "Build size: " $1}'
+        # Shows how big your build is
+        # Large builds = slow page loads
+        # 'du -sh' = disk usage, human-readable
+        # 'awk' formats the output
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-build
+          path: .next/
+          retention-days: 14
+          # Keep staging builds longer (14 days) for debugging
+
+  # JOB 2: Integration Tests (runs AFTER build-and-test succeeds)
+  # This job demonstrates job dependencies
+  integration-tests:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    # 'needs' means: wait for build-and-test to succeed first
+    # If build-and-test fails, this job never runs
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Placeholder for integration tests
+      - name: Run integration tests
+        run: echo "Integration tests would run here (e.g., Playwright, Cypress)"
+        # In a real project, you'd run:
+        # - End-to-end tests
+        # - API integration tests
+        # - Database integration tests
+
+      # Example: If you add Playwright later
+      # - name: Install Playwright browsers
+      #   run: npx playwright install --with-deps
+      #
+      # - name: Run E2E tests
+      #   run: npx playwright test
+
+# =============================================================================
+# KEY DIFFERENCES FROM DEVELOPMENT:
+#
+# 1. Stricter checks (no continue-on-error on critical steps)
+# 2. Security audits (check for vulnerable dependencies)
+# 3. Prisma validation (database schema checks)
+# 4. Multiple jobs (build + integration tests)
+# 5. Job dependencies (integration tests run AFTER build)
+# 6. Longer artifact retention (14 days vs 7)
+#
+# WHY? Staging is your last chance to catch issues before production!
+# =============================================================================
+
+# NEXT STEPS FOR YOU:
+# 1. Add actual tests to your project (Jest, Vitest, etc.)
+# 2. Remove 'continue-on-error' from test steps
+# 3. Add E2E tests (Playwright or Cypress)
+# 4. Consider adding a deployment job (Vercel preview, etc.)

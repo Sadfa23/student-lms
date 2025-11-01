@@ -1,0 +1,139 @@
+# =============================================================================
+# DEVELOPMENT CI WORKFLOW
+# =============================================================================
+# Purpose: Runs on every push/PR to the 'development' branch
+# What it does: Validates code quality, type checks, and builds the app
+# Learning: This is your first line of defense - catches bugs early!
+# =============================================================================
+
+name: Development CI
+
+# TRIGGER: When does this workflow run?
+on:
+  push:
+    branches: [development]
+    # Runs whenever code is pushed directly to development branch
+
+  pull_request:
+    branches: [development]
+    # Also runs when someone opens a Pull Request targeting development
+    # This ensures bad code can't be merged
+
+# ENVIRONMENT VARIABLES: Reusable values across all jobs
+env:
+  NODE_VERSION: '20.x'  # Using '20.x' gets latest patches automatically
+
+# JOBS: The actual work to be done
+jobs:
+  # JOB 1: Build and Test
+  # This job runs on a single Ubuntu virtual machine
+  build-and-test:
+
+    # What operating system to use (GitHub provides this for free)
+    runs-on: ubuntu-latest
+
+    # STEPS: Sequential commands that run one after another
+    steps:
+
+      # STEP 1: Download your repository code
+      # 'uses' means we're using a pre-built action (like an npm package)
+      - name: Checkout code
+        uses: actions/checkout@v4
+        # This action clones your repo to the virtual machine
+        # Without this, the VM has no access to your code!
+
+
+      # STEP 2: Install Node.js
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          # ${{ }} is variable interpolation (like ${} in JavaScript)
+
+          cache: 'npm'
+          # This caches node_modules between runs for faster builds
+          # First run: ~2 min, subsequent runs: ~30 sec
+
+
+      # STEP 3: Install dependencies
+      - name: Install dependencies
+        run: npm ci
+        # 'npm ci' vs 'npm install':
+        # - Faster (designed for CI/CD)
+        # - Deletes node_modules first (clean install)
+        # - Uses exact versions from package-lock.json (reproducible)
+        # - Fails if package.json and lock file don't match
+
+
+      # STEP 4: Run ESLint to check code quality
+      - name: Run linter
+        run: npm run lint
+        # Why run lint first?
+        # - Fastest check (catches simple errors quickly)
+        # - No point building if code style is wrong
+        # - Enforces team coding standards
+
+
+      # STEP 5: TypeScript type checking
+      - name: Type check
+        run: npx tsc --noEmit
+        # --noEmit means "check types but don't generate files"
+        # Why separate from build?
+        # - Catches type errors explicitly
+        # - Build might succeed even with 'any' types everywhere
+        # - Better error messages than during build
+
+
+      # STEP 6: Build the Next.js application
+      - name: Build application
+        run: npm run build
+        env:
+          # Build-time environment variables (if needed)
+          # These are NOT your secrets (those come later)
+          NEXT_PUBLIC_ENV: development
+        # If this fails, the build is broken - workflow stops here
+        # Next.js build includes:
+        #   - TypeScript compilation
+        #   - Code optimization
+        #   - Static page generation
+
+
+      # STEP 7: Run tests (if they exist)
+      - name: Run tests
+        run: npm test --if-present
+        # --if-present: Don't fail if 'test' script doesn't exist yet
+        continue-on-error: true
+        # continue-on-error: Workflow doesn't fail if tests fail
+        # Remove this line once you have tests set up!
+        # For now, we're allowing development without tests
+
+
+      # STEP 8: Upload build artifacts (optional but useful)
+      - name: Upload build artifacts
+        if: success()
+        # 'if' condition: Only run this step if all previous steps passed
+        uses: actions/upload-artifact@v4
+        with:
+          name: development-build
+          path: .next/
+          retention-days: 7
+          # Saves the .next/ folder for 7 days
+          # Why? You can download it later to debug issues
+          # Or use it in a deployment job
+
+# =============================================================================
+# WHAT HAPPENS WHEN YOU PUSH TO DEVELOPMENT:
+# 1. GitHub detects your push
+# 2. Spins up a fresh Ubuntu VM
+# 3. Downloads your code
+# 4. Installs Node.js 20.x
+# 5. Installs your dependencies
+# 6. Runs lint → type check → build → test
+# 7. If ANY step fails: ❌ You get an email/notification
+# 8. If all pass: ✅ Green checkmark on GitHub
+# =============================================================================
+
+# LEARNING CHECKPOINT:
+# - Can you identify which steps use pre-built actions vs shell commands?
+# - What would happen if TypeScript has errors?
+# - Why do we run lint before build?
