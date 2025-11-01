@@ -1,11 +1,33 @@
 "use client"
 
 import { signIn } from "next-auth/react"
-import { useState } from "react"
+import { useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 
+// Main page component (wrapper)
 export default function SignInPage() {
+  return (
+    <Suspense fallback={<SignInPageLoading />}>
+      <SignInPageContent />
+    </Suspense>
+  )
+}
+
+// Loading fallback (shown during build and initial load)
+function SignInPageLoading() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+        <p className="mt-4 text-gray-600">Loading sign in...</p>
+      </div>
+    </div>
+  )
+}
+
+// Actual sign-in content (uses useSearchParams)
+function SignInPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const callbackUrl = searchParams.get("callbackUrl") || "/dashboard"

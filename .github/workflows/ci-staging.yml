@@ -37,6 +37,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
       - name: Run linter
         run: npm run lint
         # In staging, linting must pass (no continue-on-error)
@@ -117,6 +120,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
 
       # Placeholder for integration tests
       - name: Run integration tests

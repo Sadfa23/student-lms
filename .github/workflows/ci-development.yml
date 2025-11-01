@@ -65,6 +65,16 @@ jobs:
         # - Fails if package.json and lock file don't match
 
 
+      # STEP 3.5: Generate Prisma Client
+      - name: Generate Prisma Client
+        run: npx prisma generate
+        # Why is this needed?
+        # - Prisma Client (@prisma/client) is generated code, not installed via npm
+        # - It reads your schema and creates TypeScript types and functions
+        # - Must be run after npm install and before using Prisma in code
+        # - Without this, you'll get: "@prisma/client did not initialize yet"
+
+
       # STEP 4: Run ESLint to check code quality
       - name: Run linter
         run: npm run lint
