@@ -8,15 +8,17 @@ import { format } from "date-fns"
 import DeleteEventButton from "./deleteEventButton"
 import MediaGallery from "../components/MediaGallery"
 
-export default async function EventDetailPage({ params }: { params: { id: string } }) {
+export default async function EventDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions)
   if (!session) {
     redirect("/auth/signin")
   }
 
+  const { id } = await params
+
   // Fetch event with all related data
   const event = await prisma.event.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       track: {
         include: {

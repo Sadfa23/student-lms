@@ -6,10 +6,11 @@ import Link from "next/link";
 import Image from "next/image";
 import EnrollButton from "./EnrollButton";
 
-export default async function TrackDetailPage({params}:{params: {id: string}}) {
+export default async function TrackDetailPage({params}:{params: Promise<{id: string}>}) {
     const session = await getServerSession(authOptions)
+    const { id } = await params
     const track = await prisma.track.findUnique({
-        where: {id: params.id},
+        where: {id},
         include: {
             leadership: {
                 include: {
@@ -113,7 +114,7 @@ export default async function TrackDetailPage({params}:{params: {id: string}}) {
             where: {
                 studentId_trackId: {
                   studentId: session.user.id,
-                  trackId: params.id,
+                  trackId: id,
                 },
               },
         })
@@ -471,9 +472,10 @@ export default async function TrackDetailPage({params}:{params: {id: string}}) {
       )
 }
 
-export async function generateMetadata({ params }: { params: { id: string } }) {
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params
     const track = await prisma.track.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: { name: true, description: true },
     })
   
