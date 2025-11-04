@@ -12,10 +12,10 @@ import { z } from "zod"
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id: trackId } = params
+    const { id: trackId } = await params
 
     const events = await prisma.event.findMany({
       where: { trackId },
@@ -59,7 +59,7 @@ export async function GET(
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -71,7 +71,7 @@ export async function POST(
       )
     }
 
-    const { id: trackId } = params
+    const { id: trackId } = await params
 
     // Check if track exists
     const track = await prisma.track.findUnique({

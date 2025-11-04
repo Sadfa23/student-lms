@@ -14,9 +14,9 @@ function isValidUUID(uuid: string): boolean {
   }
 
 
-export async function GET(req: NextRequest, {params}:{params: {id: string}}) {
+export async function GET(req: NextRequest, {params}:{params: Promise<{id: string}>}) {
     try {
-        const {id} = params;
+        const {id} = await params;
         // validating the uuid format
         if (!id || !isValidUUID(id)) {
             return NextResponse.json(
@@ -137,32 +137,32 @@ export async function GET(req: NextRequest, {params}:{params: {id: string}}) {
 
 export async function PUT(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
   ) {
     try {
       // Check authentication
       const session = await getServerSession(authOptions)
-      
+
       if (!session) {
         return NextResponse.json(
           { success: false, error: "Unauthorized - Please sign in" },
           { status: 401 }
         )
       }
-  
+
       // Check if user is admin
       if (session.user.role !== "admin") {
         return NextResponse.json(
-          { 
-            success: false, 
-            error: "Forbidden - Only admins can update tracks" 
+          {
+            success: false,
+            error: "Forbidden - Only admins can update tracks"
           },
           { status: 403 }
         )
       }
-  
-      const { id } = params
-  
+
+      const { id } = await params
+
       // Validate UUID format
       if (!id || !isValidUUID(id)) {
         return NextResponse.json(
@@ -252,7 +252,7 @@ export async function PUT(
       )
     }
   }
-export async function DELETE(req: NextRequest, {params}: {params: {id: string}}) {
+export async function DELETE(req: NextRequest, {params}: {params: Promise<{id: string}>}) {
     try {
         const session =await  getServerSession(authOptions)
         if (!session) {
@@ -264,14 +264,14 @@ export async function DELETE(req: NextRequest, {params}: {params: {id: string}})
         }
         if (session.user.role !== "admin") {
             return NextResponse.json(
-                { 
-                  success: false, 
+                {
+                  success: false,
                   error: "Forbidden - Only admins can delete tracks" 
                 },
                 { status: 403 }
               )
         }
-        const {id} = params
+        const {id} = await params
         if (!id || !isValidUUID(id)) {
             return NextResponse.json(
               {

@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { trackIdSchema } from "@/lib/validations/track.validation";
 
-export async function POST(req: NextRequest, {params}: {params:{id:string}}) {
+export async function POST(req: NextRequest, {params}: {params: Promise<{id:string}>}) {
     try {
         const session = await getServerSession(authOptions);
         if (!session) {
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest, {params}: {params:{id:string}}) {
             )
         }
 
-        const {id: trackId} = params
+        const {id: trackId} = await params
         if (!trackId || !isValidUUID(trackId)) {
             return NextResponse.json(
               {
@@ -113,7 +113,7 @@ export async function POST(req: NextRequest, {params}: {params:{id:string}}) {
   }
 }
 // This is for unenrolling
-export async function DELETE(req: NextRequest, {params}:{params:{id: string}}) {
+export async function DELETE(req: NextRequest, {params}:{params: Promise<{id: string}>}) {
     try {
         const session = await getServerSession(authOptions)
         if (!session) {
@@ -123,7 +123,7 @@ export async function DELETE(req: NextRequest, {params}:{params:{id: string}}) {
             {status: 401}
         )
         }
-        
+
         if (session.user.role !== "student") {
             return NextResponse.json({
                 success: false,
@@ -132,7 +132,7 @@ export async function DELETE(req: NextRequest, {params}:{params:{id: string}}) {
             {status: 403}
         )
         }
-        const {id: trackId} = params
+        const {id: trackId} = await params
         if(!trackId || isValidUUID(trackId)) {
             return NextResponse.json({
                 success: false,
@@ -186,7 +186,7 @@ export async function DELETE(req: NextRequest, {params}:{params:{id: string}}) {
     }
 }
 
-export async function GET(req:NextRequest, {params}: {params: {id: string}}) {
+export async function GET(req:NextRequest, {params}: {params: Promise<{id: string}>}) {
     try {
         const session = await getServerSession(authOptions)
         if (!session) {
@@ -196,8 +196,8 @@ export async function GET(req:NextRequest, {params}: {params: {id: string}}) {
             {status: 401}
         )
         }
-        
-        const {id: trackId} = params;
+
+        const {id: trackId} = await params;
         if (!trackId || !isValidUUID(trackId)) {
             return NextResponse.json(
               {
