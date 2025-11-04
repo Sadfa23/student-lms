@@ -20,23 +20,27 @@ export default async function EventDetailPage({ params }: { params: { id: string
     include: {
       track: {
         include: {
-          lead: {
-            select: {
-              id: true,
-              name: true,
-              image: true,
-            },
-          },
-          coLead: {
-            select: {
-              id: true,
-              name: true,
-              image: true,
+          leadership: {
+            include: {
+              lead: {
+                select: {
+                  id: true,
+                  name: true,
+                  image: true,
+                },
+              },
+              coLead: {
+                select: {
+                  id: true,
+                  name: true,
+                  image: true,
+                },
+              },
             },
           },
         },
       },
-      postedBy: {
+      poster: {
         select: {
           id: true,
           name: true,
@@ -57,10 +61,11 @@ export default async function EventDetailPage({ params }: { params: { id: string
   }
 
   // Check if user can edit/delete (owner, track lead/co-lead, or admin)
-  const canManage = 
-    session.user.id === event.postedById ||
-    session.user.id === event.track.leadId ||
-    session.user.id === event.track.coLeadId ||
+  const trackLeadership = event.track.leadership[0]
+  const canManage =
+    session.user.id === event.postedBy ||
+    (trackLeadership && session.user.id === trackLeadership.leadId) ||
+    (trackLeadership && session.user.id === trackLeadership.coLeadId) ||
     session.user.role === 'admin'
 
   const eventDate = new Date(event.eventDate)
@@ -205,12 +210,12 @@ export default async function EventDetailPage({ params }: { params: { id: string
               </h2>
               <div className="flex flex-wrap gap-4">
                 {/* Lead */}
-                {event.track.lead && (
+                {trackLeadership?.lead && (
                   <div className="flex items-center">
-                    {event.track.lead.image ? (
+                    {trackLeadership.lead.image ? (
                       <Image
-                        src={event.track.lead.image}
-                        alt={event.track.lead.name}
+                        src={trackLeadership.lead.image}
+                        alt={trackLeadership.lead.name}
                         width={40}
                         height={40}
                         className="rounded-full"
@@ -218,13 +223,13 @@ export default async function EventDetailPage({ params }: { params: { id: string
                     ) : (
                       <div className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center">
                         <span className="text-sm font-medium text-white">
-                          {event.track.lead.name.charAt(0).toUpperCase()}
+                          {trackLeadership.lead.name.charAt(0).toUpperCase()}
                         </span>
                       </div>
                     )}
                     <div className="ml-3">
                       <p className="text-sm font-medium text-gray-900">
-                        {event.track.lead.name}
+                        {trackLeadership.lead.name}
                       </p>
                       <p className="text-xs text-gray-500">Track Lead</p>
                     </div>
@@ -232,12 +237,12 @@ export default async function EventDetailPage({ params }: { params: { id: string
                 )}
 
                 {/* Co-Lead */}
-                {event.track.coLead && (
+                {trackLeadership?.coLead && (
                   <div className="flex items-center">
-                    {event.track.coLead.image ? (
+                    {trackLeadership.coLead.image ? (
                       <Image
-                        src={event.track.coLead.image}
-                        alt={event.track.coLead.name}
+                        src={trackLeadership.coLead.image}
+                        alt={trackLeadership.coLead.name}
                         width={40}
                         height={40}
                         className="rounded-full"
@@ -245,13 +250,13 @@ export default async function EventDetailPage({ params }: { params: { id: string
                     ) : (
                       <div className="h-10 w-10 rounded-full bg-purple-500 flex items-center justify-center">
                         <span className="text-sm font-medium text-white">
-                          {event.track.coLead.name.charAt(0).toUpperCase()}
+                          {trackLeadership.coLead.name.charAt(0).toUpperCase()}
                         </span>
                       </div>
                     )}
                     <div className="ml-3">
                       <p className="text-sm font-medium text-gray-900">
-                        {event.track.coLead.name}
+                        {trackLeadership.coLead.name}
                       </p>
                       <p className="text-xs text-gray-500">Co-Lead</p>
                     </div>
@@ -266,7 +271,14 @@ export default async function EventDetailPage({ params }: { params: { id: string
                 <h2 className="text-lg font-semibold text-gray-900 mb-3">
                   Event Photos ({event.media.length})
                 </h2>
-                <MediaGallery media={event.media} />
+                <MediaGallery
+                  media={event.media.map(m => ({
+                    id: m.id,
+                    url: m.cloudinaryUrl,
+                    type: m.mediaType,
+                    uploadedAt: m.uploadedAt
+                  }))}
+                />
               </div>
             )}
 
@@ -274,10 +286,10 @@ export default async function EventDetailPage({ params }: { params: { id: string
             <div className="pt-6 border-t border-gray-200">
               <p className="text-sm text-gray-500 mb-2">Posted by</p>
               <div className="flex items-center">
-                {event.postedBy.image ? (
+                {event.poster.image ? (
                   <Image
-                    src={event.postedBy.image}
-                    alt={event.postedBy.name}
+                    src={event.poster.image}
+                    alt={event.poster.name}
                     width={48}
                     height={48}
                     className="rounded-full"
@@ -285,15 +297,15 @@ export default async function EventDetailPage({ params }: { params: { id: string
                 ) : (
                   <div className="h-12 w-12 rounded-full bg-gray-300 flex items-center justify-center">
                     <span className="text-lg font-medium text-gray-600">
-                      {event.postedBy.name.charAt(0).toUpperCase()}
+                      {event.poster.name.charAt(0).toUpperCase()}
                     </span>
                   </div>
                 )}
                 <div className="ml-3">
                   <p className="text-sm font-medium text-gray-900">
-                    {event.postedBy.name}
+                    {event.poster.name}
                   </p>
-                  <p className="text-sm text-gray-500">{event.postedBy.email}</p>
+                  <p className="text-sm text-gray-500">{event.poster.email}</p>
                 </div>
               </div>
             </div>

@@ -20,7 +20,7 @@ export default async function EventsPage() {
           name: true,
         },
       },
-      postedBy: {
+      poster: {
         select: {
           id: true,
           name: true,
@@ -63,7 +63,10 @@ export default async function EventsPage() {
 
         {/* Pass data to Client Component */}
         <EventList 
-          events={events} 
+          events={events.map(event => ({
+            ...event,
+            postedBy: event.poster  // Transform poster to postedBy
+          }))} 
           enrolledTrackIds={enrolledTrackIds}
           userRole={session.user.role}
         />
