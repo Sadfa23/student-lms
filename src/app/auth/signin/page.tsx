@@ -1,7 +1,7 @@
 "use client"
 
 import { signIn } from "next-auth/react"
-import { useState, Suspense } from "react"
+import { useState, Suspense, FormEvent } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 
@@ -37,7 +37,7 @@ function SignInPageContent() {
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
 
-  const handleEmailSignIn = async (e) => {
+  const handleEmailSignIn = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setError("")
     setIsLoading(true)
@@ -55,8 +55,9 @@ function SignInPageContent() {
         router.push(callbackUrl)
         router.refresh()
       }
-    } catch (error) {
-      setError("An error occurred. Please try again.", error)
+    } catch (err) {
+      console.log("Error in Sign in", err)
+      setError(`An error occurred. Please try again.`)
     } finally {
       setIsLoading(false)
     }

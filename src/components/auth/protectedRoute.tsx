@@ -2,9 +2,14 @@
 
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
-import { useEffect } from "react"
+import { useEffect, ReactNode } from "react"
 
-export default function ProtectedRoute({ children, allowedRoles = [] }) {
+interface ProtectedRouteProps {
+  children: ReactNode
+  allowedRoles?: string[]
+}
+
+export default function ProtectedRoute({ children, allowedRoles = [] }: ProtectedRouteProps) {
   const { data: session, status } = useSession()
   const router = useRouter()
 

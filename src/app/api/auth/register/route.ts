@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server"
+import { NextResponse, NextRequest } from "next/server"
 import bcrypt from "bcryptjs"
 import prisma from "@/lib/prisma"
 import { z } from "zod"
@@ -8,15 +8,16 @@ const registerSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   name: z.string().min(2, "Name must be at least 2 characters"),
-  role: z.enum(["student", "lead", "co-lead"]).default("student"),
+  role: z.enum(["student", "lead", "co-lead", "admin"]).default("student"),
 })
 
-export async function POST(request) {
+type RegisterInput = z.infer<typeof registerSchema>
+export async function POST(request:NextRequest) {
   try {
     const body = await request.json()
 
     // Validate input
-    const validatedData = registerSchema.parse(body)
+    const validatedData:RegisterInput = registerSchema.parse(body)
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
@@ -62,7 +63,7 @@ export async function POST(request) {
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: "Validation error", details: error.errors },
+        { error: "Validation error", details: error.message },
         { status: 400 }
       )
     }

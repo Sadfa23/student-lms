@@ -3,50 +3,48 @@ import bcrypt from "bcryptjs"
 import prisma from "./prisma"
 import GoogleProvider from "next-auth/providers/google"
 import CredentialsProvider from "next-auth/providers/credentials"
+import type { NextAuthOptions } from "next-auth"
+import type { JWT } from "next-auth/jwt"
+import type { Session, User } from "next-auth"
+import type {Adapter} from "next-auth/adapters"
 
-export const authOptions = {
-  adapter: PrismaAdapter(prisma),
-  
+export const authOptions: NextAuthOptions = {
+  adapter: PrismaAdapter(prisma) as Adapter,
+
   providers: [
-    // Google OAuth Provider
     GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID_2,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET_2,
+      clientId: process.env.GOOGLE_CLIENT_ID_2 || "",
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET_2 || "",
       profile(profile) {
         return {
           id: profile.sub,
           name: profile.name,
           email: profile.email,
           image: profile.picture,
-          role: "student", // Default role for new Google sign-ups
+          role: "student",
         }
       },
     }),
 
-    // Email/Password Credentials Provider
     CredentialsProvider({
       name: "credentials",
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials): Promise<User | null> {
         if (!credentials?.email || !credentials?.password) {
           throw new Error("Email and password required")
         }
 
-        // Find user by email
         const user = await prisma.user.findUnique({
-          where: {
-            email: credentials.email,
-          },
+          where: { email: credentials.email },
         })
 
         if (!user || !user.passwordHash) {
           throw new Error("Invalid email or password")
         }
 
-        // Verify password
         const isPasswordValid = await bcrypt.compare(
           credentials.password,
           user.passwordHash
@@ -56,51 +54,44 @@ export const authOptions = {
           throw new Error("Invalid email or password")
         }
 
-        // Return user object (without password)
         return {
           id: user.id,
           email: user.email,
           name: user.name,
           role: user.role,
-          image: user.image,
+          image: user.image || undefined,
         }
       },
     }),
   ],
 
   session: {
-    strategy: "jwt", // Use JWT for sessions (recommended for credentials)
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60,
   },
 
   pages: {
     signIn: "/auth/signin",
     signOut: "/auth/signout",
     error: "/auth/error",
-    // verifyRequest: '/auth/verify-request',
-    // newUser: '/auth/new-user'
   },
 
   callbacks: {
-    async jwt({ token, user, account }) {
-      // Initial sign in
+    async jwt({ token, user, account }): Promise<JWT> {
       if (user) {
         token.id = user.id
         token.role = user.role
-        token.email = user.email
-        token.name = user.name
+        token.email = user.email!
+        token.name = user.name!
         token.picture = user.image
       }
 
-      // Handle Google OAuth
       if (account?.provider === "google") {
-        // Update or create user with Google ID
         const existingUser = await prisma.user.findUnique({
-          where: { email: token.email },
+          where: { email: token.email as string },
         })
 
         if (existingUser && !existingUser.googleId) {
-          // Link Google account to existing email/password account
           await prisma.user.update({
             where: { id: existingUser.id },
             data: { googleId: account.providerAccountId },
@@ -111,30 +102,20 @@ export const authOptions = {
       return token
     },
 
-    async session({ session, token }) {
-      // Add user info to session
-      if (token) {
-        session.user.id = token.id
-        session.user.role = token.role
-        session.user.email = token.email
-        session.user.name = token.name
-        session.user.image = token.picture
+    async session({ session, token }): Promise<Session> {
+      if (token && session.user) {
+        session.user.id = token.id as string
+        session.user.role = token.role as string
+        session.user.email = token.email as string
+        session.user.name = token.name as string
+        session.user.image = token.picture as string | undefined
       }
+
       return session
     },
-
   },
 
-  events: {
-    /*
-    async signIn({ user, account, profile, isNewUser }) {
-      console.log("User signed in:", user.email)
-    },
-    async signOut({ session, token }) {
-      console.log("User signed out")
-    },
-    */
-  },
+  events: {},
 
   debug: process.env.NODE_ENV === "development",
 }

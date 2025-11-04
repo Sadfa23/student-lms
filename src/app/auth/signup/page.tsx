@@ -1,14 +1,22 @@
 "use client"
 
 import { signIn } from "next-auth/react"
-import { useState } from "react"
+import { useState , FormEvent, ChangeEvent} from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+
+interface SignUpFormData {
+  name: string
+  email: string
+  password: string
+  confirmPassword: string
+  role: "student" | "lead" | "co-lead"|"admin"
+}
 
 export default function SignUpPage() {
   const router = useRouter()
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<SignUpFormData>({
     name: "",
     email: "",
     password: "",
@@ -18,14 +26,14 @@ export default function SignUpPage() {
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
 
-  const handleChange = (e) => {
+  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
     })
   }
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setError("")
 
@@ -81,7 +89,8 @@ export default function SignUpPage() {
         router.refresh()
       }
     } catch (error) {
-      setError("An error occurred. Please try again.", error)
+      console.log("Error in sigup", error)
+      setError("An error occurred. Please try again.")
     } finally {
       setIsLoading(false)
     }
@@ -207,6 +216,7 @@ export default function SignUpPage() {
                   <option value="student">Student</option>
                   <option value="lead">Track Lead</option>
                   <option value="co-lead">Co-Lead</option>
+                  <option value="admin">Admin</option>
                 </select>
               </div>
 
