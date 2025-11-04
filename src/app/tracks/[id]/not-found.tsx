@@ -9,7 +9,7 @@ export default function TrackNotFound() {
           Track Not Found
         </h2>
         <p className="text-gray-600 mb-8">
-          The track you're looking for doesn't exist or has been removed.
+          The track you&apos;re looking for doesn&apos;t exist or has been removed.
         </p>
         <Link
           href="/tracks"

@@ -131,7 +131,7 @@ export async function PUT(
     const validatedData = updateEventSchema.parse(body)
 
     // Convert eventDate string to Date if provided
-    const updateData: any = { ...validatedData }
+    const updateData: Record<string, unknown> = { ...validatedData }
     if (validatedData.eventDate) {
       updateData.eventDate = new Date(validatedData.eventDate)
     }

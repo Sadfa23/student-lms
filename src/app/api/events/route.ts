@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
       const limit = searchParams.get("limit")
   
       // Build where clause
-      const whereClause: any = {}
+      const whereClause: Record<string, unknown> = {}
   
       // Filter by track
       if (trackId) {
