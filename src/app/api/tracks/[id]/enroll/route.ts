@@ -99,8 +99,7 @@ export async function POST(req: NextRequest, {params}: {params: Promise<{id:stri
       )
     } catch (error) {
         // Handle unique constraint violation (shouldn't happen due to check above)
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        if (error.code === "P2002") {
+    if (error && typeof error === 'object' && 'code' in error && error.code === "P2002") {
           return NextResponse.json(
             {
               success: false,
@@ -108,8 +107,14 @@ export async function POST(req: NextRequest, {params}: {params: Promise<{id:stri
             },
             { status: 400 }
           )
-        }
     }
+    return NextResponse.json(
+        {
+          success: false,
+          error: "Failed to enroll in track",
+        },
+        { status: 500 }
+      )
   }
 }
 // This is for unenrolling
