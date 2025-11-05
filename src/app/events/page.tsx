@@ -48,7 +48,7 @@ export default async function EventsPage() {
     },
   })
 
-  const enrolledTrackIds = userTracks.map(t => t.trackId)
+  const enrolledTrackIds = userTracks.map((t: typeof userTracks[number]) => t.trackId)
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -62,8 +62,8 @@ export default async function EventsPage() {
         </div>
 
         {/* Pass data to Client Component */}
-        <EventList 
-          events={events.map(event => ({
+        <EventList
+          events={events.map((event: typeof events[number]) => ({
             ...event,
             postedBy: event.poster  // Transform poster to postedBy
           }))} 
