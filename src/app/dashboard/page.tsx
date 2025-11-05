@@ -169,7 +169,7 @@ async function StudentDashboard({ userId, userName }: { userId: string; userName
               </div>
               {enrolledTracks.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {enrolledTracks.map((enrollment) => (
+                  {enrolledTracks.map((enrollment: typeof enrolledTracks[number]) => (
                     <Link
                       key={enrollment.id}
                       href={`/tracks/${enrollment.track.id}`}
@@ -244,7 +244,7 @@ async function StudentDashboard({ userId, userName }: { userId: string; userName
                   Upcoming Events
                 </h2>
                 <div className="space-y-4">
-                  {upcomingEvents.map((event) => (
+                  {upcomingEvents.map((event: typeof upcomingEvents[number]) => (
                     <div key={event.id} className="border-l-4 border-green-500 pl-4 py-2">
                       <h3 className="font-medium text-gray-900">{event.title}</h3>
                       <p className="text-sm text-gray-600 mt-1">{event.track.name}</p>
@@ -329,7 +329,7 @@ async function LeadDashboard({ userId, userName, role }: { userId: string; userN
 
   // Calculate total stats across all managed tracks
   const totalStats = managedTracks.reduce(
-    (acc, leadership) => ({
+    (acc: { students: number; events: number; announcements: number; materials: number }, leadership: typeof managedTracks[number]) => ({
       students: acc.students + leadership.track._count.students,
       events: acc.events + leadership.track._count.events,
       announcements: acc.announcements + leadership.track._count.announcements,
@@ -339,7 +339,7 @@ async function LeadDashboard({ userId, userName, role }: { userId: string; userN
   )
 
   // Fetch recent announcements from managed tracks
-  const trackIds = managedTracks.map((m) => m.track.id)
+  const trackIds = managedTracks.map((m: typeof managedTracks[number]) => m.track.id)
   const recentAnnouncements = await prisma.announcement.findMany({
     where: {
       trackId: { in: trackIds },
@@ -431,7 +431,7 @@ async function LeadDashboard({ userId, userName, role }: { userId: string; userN
   ]
 
   // Convert announcements to activity items
-  const activities = recentAnnouncements.map((announcement) => ({
+  const activities = recentAnnouncements.map((announcement: typeof recentAnnouncements[number]) => ({
     id: announcement.id,
     type: "announcement" as const,
     title: announcement.title,
@@ -512,7 +512,7 @@ async function LeadDashboard({ userId, userName, role }: { userId: string; userN
               </h2>
               {managedTracks.length > 0 ? (
                 <div className="space-y-4">
-                  {managedTracks.map((leadership) => (
+                  {managedTracks.map((leadership: typeof managedTracks[number]) => (
                     <div
                       key={leadership.id}
                       className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition"
@@ -564,7 +564,7 @@ async function LeadDashboard({ userId, userName, role }: { userId: string; userN
                         <div>
                           <p className="text-xs text-gray-500 mb-2">Recent enrollments:</p>
                           <div className="flex items-center gap-2">
-                            {leadership.track.students.slice(0, 5).map((enrollment) => (
+                            {leadership.track.students.slice(0, 5).map((enrollment: typeof leadership.track.students[number]) => (
                               <div key={enrollment.id} className="relative group">
                                 {enrollment.student.image ? (
                                   <Image
@@ -627,7 +627,7 @@ async function LeadDashboard({ userId, userName, role }: { userId: string; userN
                   Upcoming Events
                 </h2>
                 <div className="space-y-4">
-                  {upcomingEvents.map((event) => (
+                  {upcomingEvents.map((event: typeof upcomingEvents[number]) => (
                     <div key={event.id} className="border-l-4 border-green-500 pl-4 py-2">
                       <h3 className="font-medium text-gray-900">{event.title}</h3>
                       <p className="text-sm text-gray-600 mt-1">{event.track.name}</p>
@@ -795,7 +795,7 @@ async function AdminDashboard({ userId, userName }: { userId: string; userName: 
   ]
 
   // Convert enrollments to activity items
-  const activities = recentEnrollments.map((enrollment) => ({
+  const activities = recentEnrollments.map((enrollment: typeof recentEnrollments[number]) => ({
     id: enrollment.id,
     type: "enrollment" as const,
     title: `${enrollment.student.name} enrolled`,
@@ -901,7 +901,7 @@ async function AdminDashboard({ userId, userName }: { userId: string; userName: 
                 </Link>
               </div>
               <div className="space-y-3">
-                {tracks.map((track) => (
+                {tracks.map((track: typeof tracks[number]) => (
                   <div
                     key={track.id}
                     className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:border-blue-300 transition"
@@ -929,7 +929,7 @@ async function AdminDashboard({ userId, userName }: { userId: string; userName: 
                 Recent Registrations
               </h2>
               <div className="space-y-3">
-                {recentUsers.map((user) => (
+                {recentUsers.map((user: typeof recentUsers[number]) => (
                   <div
                     key={user.id}
                     className="flex items-center justify-between p-3 border border-gray-200 rounded-lg"
