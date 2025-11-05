@@ -94,8 +94,8 @@ export async function POST(
     }
 
     // Check authorization (must be lead, co-lead, or admin)
-    const isLead = track.leadership.some((l) => l.leadId === session.user.id)
-    const isCoLead = track.leadership.some((l) => l.coLeadId === session.user.id)
+    const isLead = track.leadership.some((l: { leadId: string; coLeadId: string | null }) => l.leadId === session.user.id)
+    const isCoLead = track.leadership.some((l: { leadId: string; coLeadId: string | null }) => l.coLeadId === session.user.id)
     const isAdmin = session.user.role === "admin"
 
     if (!isLead && !isCoLead && !isAdmin) {
