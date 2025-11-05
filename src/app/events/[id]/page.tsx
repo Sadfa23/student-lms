@@ -274,7 +274,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
                   Event Photos ({event.media.length})
                 </h2>
                 <MediaGallery
-                  media={event.media.map(m => ({
+                  media={event.media.map((m: typeof event.media[number]) => ({
                     id: m.id,
                     url: m.cloudinaryUrl,
                     type: m.mediaType,
