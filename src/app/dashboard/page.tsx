@@ -673,10 +673,10 @@ async function AdminDashboard({ userId, userName }: { userId: string; userName: 
   })
 
   const roleStats = {
-    student: usersByRole.find((r) => r.role === "student")?._count || 0,
-    lead: usersByRole.find((r) => r.role === "lead")?._count || 0,
-    "co-lead": usersByRole.find((r) => r.role === "co-lead")?._count || 0,
-    admin: usersByRole.find((r) => r.role === "admin")?._count || 0,
+    student: usersByRole.find((r: typeof usersByRole[number]) => r.role === "student")?._count || 0,
+    lead: usersByRole.find((r: typeof usersByRole[number]) => r.role === "lead")?._count || 0,
+    "co-lead": usersByRole.find((r: typeof usersByRole[number]) => r.role === "co-lead")?._count || 0,
+    admin: usersByRole.find((r: typeof usersByRole[number]) => r.role === "admin")?._count || 0,
   }
 
   // Fetch recent users (last 7 days)
