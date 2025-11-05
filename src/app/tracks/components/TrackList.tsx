@@ -2,9 +2,11 @@
 
 import { useState } from "react"
 import TrackCard from "./TrackCard"
-import { Track } from "@prisma/client"
 
-type TrackWithDetails = Track & {
+type TrackWithDetails = {
+    id: string
+    name: string
+    description: string | null
     _count: {
       students: number
       events: number

@@ -1,13 +1,15 @@
 "use client"
 
-import { Track } from "@prisma/client"
 import Link from "next/link"
 import Image from "next/image"
 import { useSession } from "next-auth/react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 
-type TrackWithDetails = Track & {
+type TrackWithDetails = {
+  id: string
+  name: string
+  description: string | null
   _count: {
     students: number
     events: number
