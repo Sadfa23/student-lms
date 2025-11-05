@@ -63,7 +63,7 @@ async function StudentDashboard({ userId, userName }: { userId: string; userName
   })
 
   // Fetch upcoming events from enrolled tracks
-  const trackIds = enrolledTracks.map((et) => et.track.id)
+  const trackIds = enrolledTracks.map((et: { track: { id: string } }) => et.track.id)
   const upcomingEvents = await prisma.event.findMany({
     where: {
       trackId: { in: trackIds },
