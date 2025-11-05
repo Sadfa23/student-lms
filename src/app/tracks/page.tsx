@@ -1,9 +1,11 @@
 import { Suspense } from "react";
 import prisma from "@/lib/prisma";
-import { Track } from "@prisma/client";
 import TrackList from "./components/TrackList";
 
-type TrackWithDetails = Track & {
+type TrackWithDetails = {
+    id: string
+    name: string
+    description: string | null
     _count: {
         students: number
         events: number
